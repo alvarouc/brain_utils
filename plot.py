@@ -9,6 +9,17 @@ def plot_brain(data, mask):
     plt.imshow(temp[:, :, 40])
     plt.colorbar()
 
+def stack(temp, x,y,z):
+
+    sx = np.flipud(np.squeeze(temp[x, :, :]).T)
+    sy = np.flipud(np.squeeze(temp[:, y, :]).T)
+    sz = np.flipud(np.squeeze(temp[:, :, z]).T)
+
+    upper = np.hstack((sy,sx))
+    lower = np.hstack((sz, np.zeros((sz.shape[0], sx.shape[1]))))
+    both = np.vstack((upper,lower))
+
+    return both
 
 def plot_source(source, template, mask, th=3, vmin=-5, vmax=5):
     '''
@@ -25,30 +36,15 @@ def plot_source(source, template, mask, th=3, vmin=-5, vmax=5):
     def unravel(x): return np.unravel_index(x, shape)
 
     temp = np.zeros(shape)
-    temp[unravel(mask)] = source
+    temp[mask] = source
     x, y, z = unravel(np.abs(temp).argmax())
-    sx = np.squeeze(temp[x, :, :])
-    sy = np.squeeze(temp[:, y, :])
-    sz = np.squeeze(temp[:, :, z])
+    
+    source = stack(temp, x,y,z)
+    
+    sm = np.ma.masked_where(np.abs(source) < th, source)
 
-    # draw template on maximum position
-    plt.subplot(1, 3, 3)
-    plt.imshow(np.squeeze(template[:, :, z]), cmap=cm.gray)
-    masked_data = np.ma.masked_where(np.abs(sz) < th, sz)
-    plt.imshow(masked_data, cmap=cm.jet, interpolation='none',
-               vmin=vmin, vmax=vmax)
+    background = stack(template, x,y,z)
 
-    plt.subplot(1, 3, 1)
-    plt.imshow(np.flipud(np.squeeze(template[:, y, :]).T), cmap=cm.gray)
-    sy = np.flipud(sy.T)
-    masked_data = np.ma.masked_where(np.abs(sy) < th, sy)
-    plt.imshow(masked_data, cmap=cm.jet, interpolation='none',
-               vmin=vmin, vmax=vmax)
-
-    plt.subplot(1, 3, 2)
-    plt.imshow(np.flipud(np.squeeze(template[x, :, :]).T), cmap=cm.gray)
-    sx = np.flipud(sx.T)
-    masked_data = np.ma.masked_where(np.abs(sx) < th, sx)
-    plt.imshow(masked_data, cmap=cm.jet,
-               interpolation='none', vmin=vmin,
-               vmax=vmax)
+    plt.imshow(background, cmap=cm.gray)
+    plt.imshow(sm, cmap=cm.jet, vmin=vmin, vmax=vmax, aspect='equal')
+    plt.axis('off')
